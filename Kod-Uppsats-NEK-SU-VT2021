@@ -1,0 +1,171 @@
+#Använda paket
+library(readxl)
+library(plm)
+library(lubridate)
+library(ggplot2)
+library(tidyverse)
+library(ggfortify)
+library(magrittr)
+library(zoo)
+library(forecast)
+library(dplyr)
+library(tmap)
+library(tmaptools)
+library(sf)
+library(raster)
+library(spData)
+library(spDataLarge)
+library(leaflet)
+library(maps)
+library(mapproj)
+library(rgdal)
+library(maptools)
+library(sp)
+library(plyr)
+library(ggmap)
+library(scales)
+library(viridis)
+library(plotly)
+library(patchwork)
+library(hrbrthemes)
+library(plotrix)
+library(sandwich)
+library(fixest)
+library(writexl)
+library(plotrix)
+library(modelsummary)
+library(fansi)
+library(lfe)
+library(stargazer)
+library(panelr)
+library(ggExtra)
+hrbrthemes::import_roboto_condensed()
+
+install.packages("panelr")
+library(RColorBrewer)
+
+
+#Importerar data och konverterar till data.frame
+data <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\Data_Ny.xlsx")
+data <- as.data.frame(data)
+options(scipen=999)
+
+
+#Ändrar struktur för variabeln År och Kommun till kategorisk (faktor)
+data$År <- as.factor(data$År)
+data$Kommun <- as.factor(data$Kommun)
+
+#Skapar årsdummies
+data$d2010 <- ifelse(data$År == '2010', 1, 0)
+data$d2014 <- ifelse(data$År == '2014', 1, 0)
+data$d2018 <- ifelse(data$År == '2018', 1, 0)
+
+
+
+### Regressioner med paketet Fixest
+
+#1 - Huvudregression utan kontrollvariabler
+Huvudregression <- feols(Valresultat ~ Utrikesfödda 
+                                | Kommun + År, panel.id = ~ Kommun + År, data = data)
+
+Huvudregression <- rols(Valresultat ~ Utrikesfödda 
+                         | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Huvudregression)
+
+#2 - Huvudregression med kontrollvariabler
+Huvudregression_kontroll <- feols(Valresultat ~ Utrikesfödda + Arbetslöshet + Medianinkomst + Yngre + Äldre + Brott + Skattesats
+                         | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Huvudregression_kontroll)
+
+#3 - Dynamisk regression (Interaktion mellan Utrikesfödda_k2014 och d2018) utan kontrollvariabler
+Dynamiskregression <- feols(Valresultat ~ i(l(Utrikesfödda, 1), År, keep = 2018) + Utrikesfödda
+                            | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Dynamiskregression)
+
+#4 - Dynamisk regression (Interaktion mellan Utrikesfödda_k2014 och d2018) med kontrollvariabler
+Dynamiskregression_kontroll <- feols(Valresultat ~ i(l(Utrikesfödda, 1), År, keep = 2018) + Utrikesfödda + Arbetslöshet + Medianinkomst + Yngre + Äldre + Brott + Skattesats
+                            | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Dynamiskregression_kontroll)
+
+
+#5 - Test för strikt exogenietet med lead +1 av Utrikefödda
+data <- data %>% group_by(Kommun) %>%
+  mutate(Utrikesfödda_lead1 = dplyr::lead(Utrikesfödda, n = 1, default = NA)) #Skapar lead +1 för variabeln Utrikesfödda
+
+Leadregression <- feols(Valresultat ~ Utrikesfödda_lead1 + Utrikesfödda + Arbetslöshet + Medianinkomst + Yngre + Äldre + Brott + Skattesats
+                        | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Leadregression)
+
+
+#6 - Logaritmerade versioner
+Huvudregression_log <- feols(log(Valresultat) ~ log(Utrikesfödda) + log(Arbetslöshet) + log(Medianinkomst) + log(Yngre) + log(Äldre) + log(Brott) + log(Skattesats)
+                                  | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Huvudregression_log)
+
+#7 - Regression med Nyanlända i stället för Utrikesfödda
+Regression_NY <- feols(Valresultat ~ Nyanlända + Arbetslöshet + Medianinkomst + Yngre + Äldre + Brott + Skattesats
+                             | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Regression_NY)
+
+
+#8 - Dynamisk regression (Interaktion mellan Nyanlända_k2014 och d2018) med kontrollvariabler
+Dynamiskregression_NY <- feols(Valresultat ~ i(l(Nyanlända, 1), År, keep = 2018) + Nyanlända + Arbetslöshet + Medianinkomst + Yngre + Äldre + Brott + Skattesats
+                            | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Dynamiskregression_NY)
+
+#9 -  Test för strikt exogenietet med lead +1 av Nyanlända
+data <- data %>% group_by(Kommun) %>%
+  mutate(Nyanlända_lead1 = dplyr::lead(Nyanlända, n = 1, default = NA)) #Skapar lead +1 för variabeln Nyanlända
+
+Leadsregression_NY <- feols(Valresultat ~ l(Nyanlända, -1) + Nyanlända + Arbetslöshet + Medianinkomst + Yngre + Äldre + Brott + Skattesats
+                               | Kommun + År, panel.id = ~ Kommun + År, data = data)
+etable(Leadsregression_NY)
+
+
+
+### Figurer
+
+# Barplot Asylsökande och invandring
+df <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\invandring.xlsx") #Separat data för invandring och asylsökande per år
+p <- ggplot(df, aes(fill=Grupp, y=Antal, x=År)) + 
+  geom_bar(position="stack", stat="identity") +
+  scale_fill_viridis(discrete = T) +
+  xlab("År") + 
+  theme(legend.title = element_text(color = "black", size = 15),
+        legend.text = element_text(color = "black", size = 14), legend.position="right", axis.text.x = element_text(color="black", size=15), axis.text.y = element_text(color="black", size=15), axis.title.x = element_text(color = "black", size = 16, face = "plain", angle = 0),
+        axis.title.y = element_text(color = "black", size = 16, face = "plain"))
+p
+
+# Karta Valresultat 2018
+# Shapefilen är nedladdad från SCB: https://www.scb.se/contentassets/3443fea3fa6640f7a57ea15d9a372d33/shape_svenska.zip
+mydata <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KartaKommuner2018.xlsx") #Separat data att skapa interaktiv karta
+mydata <- as.data.frame(mydata)
+mymap <- st_read("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KommunRT90\\Kommun_RT90_region.shp", stringsAsFactors = FALSE) #Separat data att skapa interaktiv karta
+map_and_data <- inner_join(mymap, mydata, by = "KnKod")
+
+tm_shape(map_and_data) +
+  tm_polygons("Valresultat 2018", id = "KnKod")
+
+tmap_mode("view")
+tmap_last()
+
+test_map <- tmap_last()
+
+tmap_save(test_map, "test_map.html")
+
+# Karta Utrikesfödda 2018
+# Shapefilen är nedladdad från SCB: https://www.scb.se/contentassets/3443fea3fa6640f7a57ea15d9a372d33/shape_svenska.zip
+mydata <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KartaKommuner2018.xlsx") #Separat data att skapa interaktiv karta
+mydata <- as.data.frame(mydata)
+mymap <- st_read("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KommunRT90\\Kommun_RT90_region.shp", stringsAsFactors = FALSE) #Separat data att skapa interaktiv karta
+map_and_data <- inner_join(mymap, mydata, by = "KnKod")
+
+tm_shape(map_and_data) +
+  tm_polygons("Utrikesfödda", id = "KnKod")
+
+tmap_mode("view")
+tmap_last()
+
+test_map <- tmap_last()
+
+tmap_save(test_map, "test_map2.html")
