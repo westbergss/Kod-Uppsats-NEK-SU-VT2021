@@ -1,4 +1,4 @@
-# Använda paket
+#Använda paket
 library(readxl)
 library(plm)
 library(lubridate)
@@ -44,20 +44,23 @@ library(Ecdat)
 library(multiwayvcov)
 hrbrthemes::import_roboto_condensed()
 
+install.packages("panelr")
+library(RColorBrewer)
 
-# Importerar data och konverterar till data.frame
+
+#Importerar data och konverterar till data.frame
 data <- read_excel("\\Users\\Sammy\\OneDrive\\Skrivbord\\Uppsats\\Data_Ny.xlsx")
 data <- as.data.frame(data)
 options(scipen=999)
 
 
-# Ändrar struktur för variabler
+#Ändrar struktur för variabeln År och Kommun till kategorisk (faktor)
 data$År <- as.factor(data$År)
 data$Kommun <- as.factor(data$Kommun)
 data$Storstad <- as.numeric(data$Storstad)
 data$Störrestad <- as.numeric(data$Störrestad)
 
-# Skapar årsdummies
+#Skapar årsdummies
 data$d2010 <- ifelse(data$År == '2010', 1, 0)
 data$d2014 <- ifelse(data$År == '2014', 1, 0)
 data$d2018 <- ifelse(data$År == '2018', 1, 0)
@@ -70,72 +73,72 @@ data$d2018 <- ifelse(data$År == '2018', 1, 0)
 
 #1 Ekvation (4.4)
 A1 <- feols(log(Valresultat) ~ log(Utrikesfödda)
-                                | År, data = data, cluster="Kommun") # Modell 1
+                                | År, data = data, cluster="Kommun")
 etable(A1)
 
 B1 <- feols(log(Valresultat) ~ log(Utrikesfödda)
-                         | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 2
+                         | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(B1)
 
 C1 <- feols(log(Valresultat) ~ log(Utrikesfödda) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-                           | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 3
+                           | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(C1)
 
 
 # Ekvation (4.5)
 
 A2 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(log(Utrikesfödda), Störrestad, keep = 1)
-            | År, data = data, cluster = "Kommun") # Modell 4
+            | År, data = data, cluster = "Kommun")
 etable(A2)
 
 B2 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(log(Utrikesfödda), Störrestad, keep = 1)
-            | Kommun + År, data = data) # Modell 5
+            | Kommun + År, data = data)
 etable(B2)
 
 C2 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(log(Utrikesfödda), Störrestad, keep = 1) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-            | Kommun + År, data = data) # Modell 6
+            | Kommun + År, data = data)
 etable(C2)
 
 
 # Ekvation (4.6)
 A3 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(l(log(Utrikesfödda)), År, keep = 2018)
-            | År, panel.id = ~ Kommun + År, data = data, cluster = "Kommun") # Modell 7
+            | År, panel.id = ~ Kommun + År, data = data, cluster = "Kommun")
 etable(A3)
 
 B3 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(l(log(Utrikesfödda)), År, keep = 2018)
-             | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 8
+             | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(B3)
 
 C3 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(l(log(Utrikesfödda)), År, keep = 2018) + log(Arbetslöshet) + log(Brott) + log(Högutbildade) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-             | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 9
+             | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(C3)
 
 
 # Robusthetsanalys Utrikesfödda
-RU <- feols(Valresultat ~ Utrikesfödda + l(Utrikesfödda, -1) + Arbetslöshet + Brott + Medianinkomst + Skattesats + Yngre + Äldre
-            | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 10
+RU <- feols(log(Valresultat) ~ log(Utrikesfödda) + l(log(Utrikesfödda), -1) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
+            | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(RU)
 
 RU$obsRemoved
 
 # Robusthetsanalys Nyanlända
-RN <- feols(Valresultat ~ Nyanlända + l(Nyanlända, -1) + Arbetslöshet + Brott + Medianinkomst + Skattesats + Yngre + Äldre
-            |Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 14
+RN <- feols(log(Valresultat) ~ log(Nyanlända) + l(log(Nyanlända), -1) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
+            | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(RN)
 
 
 ### Tilläggsanalys
 
 TLA1 <- feols(log(Valresultat) ~ log(Nyanlända) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-             | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 11
+             | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(TLA1)
 
 TLA2 <- feols(log(Valresultat) ~ log(Nyanlända) + i(log(Nyanlända), Störrestad, keep = 1) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-              | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 12
+              | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(TLA2)
 
 TLA3 <- feols(log(Valresultat) ~ log(Nyanlända) + i(l(log(Nyanlända)), År, keep = 2018) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-              | Kommun + År, panel.id = ~ Kommun + År, data = data) # Modell 13
+              | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(TLA3)
 
 
