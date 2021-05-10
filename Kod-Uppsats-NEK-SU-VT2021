@@ -49,7 +49,7 @@ library(RColorBrewer)
 
 
 #Importerar data och konverterar till data.frame
-data <- read_excel("\\Users\\Sammy\\OneDrive\\Skrivbord\\Uppsats\\Data_Ny.xlsx")
+data <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats\\Data_Ny.xlsx")
 data <- as.data.frame(data)
 options(scipen=999)
 
@@ -71,21 +71,21 @@ data$d2018 <- ifelse(data$År == '2018', 1, 0)
 
 ### Huvudregressioner med paketet Fixest
 
-#1 Ekvation (4.4)
+#1 Ekvation (5.1)
 A1 <- feols(log(Valresultat) ~ log(Utrikesfödda)
-                                | År, data = data, cluster="Kommun")
+            | År, data = data, cluster="Kommun")
 etable(A1)
 
 B1 <- feols(log(Valresultat) ~ log(Utrikesfödda)
-                         | Kommun + År, panel.id = ~ Kommun + År, data = data)
+            | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(B1)
 
 C1 <- feols(log(Valresultat) ~ log(Utrikesfödda) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-                           | Kommun + År, panel.id = ~ Kommun + År, data = data)
+            | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(C1)
 
 
-# Ekvation (4.5)
+# Ekvation (5.2)
 
 A2 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(log(Utrikesfödda), Störrestad, keep = 1)
             | År, data = data, cluster = "Kommun")
@@ -100,17 +100,17 @@ C2 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(log(Utrikesfödda), Störr
 etable(C2)
 
 
-# Ekvation (4.6)
+# Ekvation (5.3)
 A3 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(l(log(Utrikesfödda)), År, keep = 2018)
             | År, panel.id = ~ Kommun + År, data = data, cluster = "Kommun")
 etable(A3)
 
 B3 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(l(log(Utrikesfödda)), År, keep = 2018)
-             | Kommun + År, panel.id = ~ Kommun + År, data = data)
+            | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(B3)
 
 C3 <- feols(log(Valresultat) ~ log(Utrikesfödda) + i(l(log(Utrikesfödda)), År, keep = 2018) + log(Arbetslöshet) + log(Brott) + log(Högutbildade) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-             | Kommun + År, panel.id = ~ Kommun + År, data = data)
+            | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(C3)
 
 
@@ -130,7 +130,7 @@ etable(RN)
 ### Tilläggsanalys
 
 TLA1 <- feols(log(Valresultat) ~ log(Nyanlända) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
-             | Kommun + År, panel.id = ~ Kommun + År, data = data)
+              | Kommun + År, panel.id = ~ Kommun + År, data = data)
 etable(TLA1)
 
 TLA2 <- feols(log(Valresultat) ~ log(Nyanlända) + i(log(Nyanlända), Störrestad, keep = 1) + log(Arbetslöshet) + log(Brott) + log(Medianinkomst) + log(Skattesats) + log(Yngre) + log(Äldre)
@@ -188,14 +188,48 @@ test_map <- tmap_last()
 
 tmap_save(test_map, "test_map.html")
 
-# Karta Nyanlända 2018
-mydata <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KartaKommuner2018.xlsx")
+# Karta Utrikesfödda 2018
+mydata <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats\\KartaKommuner2018.xlsx")
 mydata <- as.data.frame(mydata)
 mymap <- st_read("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KommunRT90\\Kommun_RT90_region.shp", stringsAsFactors = FALSE)
 map_and_data <- inner_join(mymap, mydata, by = "KnKod")
 
 tm_shape(map_and_data) +
-  tm_polygons("Utrikesfödda", id = "KnKod")
+  tm_polygons("Utrikesfödda 2018", id = "KnKod")
+
+tmap_mode("view")
+tmap_last()
+
+test_map <- tmap_last()
+
+tmap_save(test_map, "test_map2.html")
+
+
+
+# Karta Valresultat 2010
+mydata <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats\\KartaKommuner2010.xlsx")
+mydata <- as.data.frame(mydata)
+mymap <- st_read("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KommunRT90\\Kommun_RT90_region.shp", stringsAsFactors = FALSE)
+map_and_data <- inner_join(mymap, mydata, by = "KnKod")
+
+tm_shape(map_and_data) +
+  tm_polygons("Valresultat 2010", id = "KnKod")
+
+tmap_mode("view")
+tmap_last()
+
+test_map <- tmap_last()
+
+tmap_save(test_map, "test_map.html")
+
+# Karta Utrikesfödda 2010
+mydata <- read_excel("\\Users\\Sammy\\Desktop\\Uppsats\\KartaKommuner2010.xlsx")
+mydata <- as.data.frame(mydata)
+mymap <- st_read("\\Users\\Sammy\\Desktop\\Uppsats NEK\\NYTT\\KommunRT90\\Kommun_RT90_region.shp", stringsAsFactors = FALSE)
+map_and_data <- inner_join(mymap, mydata, by = "KnKod")
+
+tm_shape(map_and_data) +
+  tm_polygons("Utrikesfödda 2010", id = "KnKod")
 
 tmap_mode("view")
 tmap_last()
